@@ -68,9 +68,24 @@ def protected_profile(authorization: str | None = Header(default=None)):
         return JSONResponse(status_code=401, content={"error": "Access token required"})
 
     token = parts[1]
-    # Stage 3 mein yahan token Supabase se verify hoga
-    return {"message": "Token received (not verified yet)"}
 
+    try:
+        result = supabase.auth.get_user(token)
+    except Exception as e:
+        print("token verify error:", e)
+        return JSONResponse(status_code=401, content={"error": "Invalid or expired token"})
 
+    if result is None or result.user is None:
+        return JSONResponse(status_code=401, content={"error": "Invalid or expired token"})
+
+    user = result.user
+    return {
+        "id": user.id,
+        "email": user.email,
+        "created_at": str(user.created_at),
+    }
+    
+    
+    
  
     

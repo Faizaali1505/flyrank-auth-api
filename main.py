@@ -108,6 +108,14 @@ def protected_dashboard(auth: dict = Depends(get_current_user)):
 
 
 
+@app.post("/auth/logout", status_code=204, summary="Log out")
+def logout(auth: dict = Depends(get_current_user)):
+    try:
+        supabase.auth.admin.sign_out(auth["token"])
+    except Exception as e:
+        print("logout error:", e)
+        return JSONResponse(status_code=400, content={"error": "Logout failed"})
+    return Response(status_code=204)
 
 
 

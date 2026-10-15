@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from supabase import create_client, Client
@@ -55,5 +55,22 @@ def login(body: AuthBody):
         "refresh_token": result.session.refresh_token,
     }
     
-    
+
+@app.get("/public/info", summary="Public info (no login needed)")
+def public_info():
+    return {"message": "Welcome stranger! This info is public."}
+
+
+@app.get("/protected/profile", summary="Private profile (login needed)")
+def protected_profile(authorization: str | None = Header(default=None)):
+    parts = (authorization or "").split()
+    if len(parts) != 2 or parts[0].lower() != "bearer" or not parts[1]:
+        return JSONResponse(status_code=401, content={"error": "Access token required"})
+
+    token = parts[1]
+    # Stage 3 mein yahan token Supabase se verify hoga
+    return {"message": "Token received (not verified yet)"}
+
+
+ 
     

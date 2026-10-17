@@ -1,9 +1,11 @@
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI, Header, Depends, Request
+from fastapi import FastAPI, Depends, Request
 from fastapi.responses import JSONResponse, Response
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from supabase import create_client, Client
+
 
 load_dotenv()
 
@@ -15,10 +17,10 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-app = FastAPI(title="Auth API")
-
-print("Server running and connected to Supabase")
-
+app = FastAPI(
+    title="Auth API",
+    description="Signup, login, logout and Bearer-token protected routes, powered by Supabase Auth.",
+)
 
 class AuthError(Exception):
     def __init__(self, message: str):
@@ -30,13 +32,15 @@ async def auth_error_handler(request: Request, exc: AuthError):
     return JSONResponse(status_code=401, content={"error": exc.message})
 
 
-def get_current_user(authorization: str | None = Header(default=None)):
+bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme)):
     """Guard: runs before every protected route."""
-    parts = (authorization or "").split()
-    if len(parts) != 2 or parts[0].lower() != "bearer" or not parts[1]:
+    if credentials is None or not credentials.credentials:
         raise AuthError("Access token required")
 
-    token = parts[1]
+    token = credentials.credentials
 
     try:
         result = supabase.auth.get_user(token)
@@ -48,6 +52,7 @@ def get_current_user(authorization: str | None = Header(default=None)):
         raise AuthError("Invalid or expired token")
 
     return {"user": result.user, "token": token}
+
 
 
 class AuthBody(BaseModel):
